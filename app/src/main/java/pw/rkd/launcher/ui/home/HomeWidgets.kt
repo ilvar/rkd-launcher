@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import android.media.AudioManager
 import android.media.AudioAttributes
 import android.media.AudioPlaybackConfiguration
@@ -746,7 +747,7 @@ fun TodoSection(items: List<TodoItem>, maxLines: Int, onCheck: (String) -> Unit,
         if (active.isEmpty()) T("No tasks yet. Tap Add.", size = 14.sp, color = c.dim)
         active.take(maxLines).forEach { item ->
             T("□  ${item.text}", Modifier.fillMaxWidth().clickable { onCheck(item.id) }.padding(vertical = 3.dp),
-                size = 14.sp, color = c.dim, maxLines = 1)
+                size = 14.sp, color = lerp(c.dim, c.fg, 0.45f), maxLines = 1)
         }
         if (active.size > maxLines) T("${active.size - maxLines} more tasks", Modifier.clickable(onClick = onShowChecked).padding(vertical = 4.dp), size = 12.sp, color = c.dim)
         VSpace(8.dp)
