@@ -104,6 +104,7 @@ data class Settings(
 
     // Drawer
     val autoKeyboard: Boolean = false,
+    val preferLatinKeyboard: Boolean = false,
     val autoLaunch: Boolean = false,
     val showRecentInstalls: Boolean = true,
     val showUsageInDrawer: Boolean = true,
@@ -190,6 +191,7 @@ data class Settings(
         put("rightShortcut", rightShortcut)
 
         put("autoKeyboard", autoKeyboard)
+        put("preferLatinKeyboard", preferLatinKeyboard)
         put("autoLaunch", autoLaunch)
         put("showRecentInstalls", showRecentInstalls)
         put("showUsageInDrawer", showUsageInDrawer)
@@ -286,6 +288,7 @@ data class Settings(
                 rightShortcut = o.optString("rightShortcut", d.rightShortcut),
 
                 autoKeyboard = o.optBoolean("autoKeyboard", d.autoKeyboard),
+                preferLatinKeyboard = o.optBoolean("preferLatinKeyboard", d.preferLatinKeyboard),
                 autoLaunch = o.optBoolean("autoLaunch", d.autoLaunch),
                 showRecentInstalls = o.optBoolean("showRecentInstalls", d.showRecentInstalls),
                 showUsageInDrawer = o.optBoolean("showUsageInDrawer", d.showUsageInDrawer),

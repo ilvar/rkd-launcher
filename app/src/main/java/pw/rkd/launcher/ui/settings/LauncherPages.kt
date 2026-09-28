@@ -312,6 +312,7 @@ internal fun DrawerPage(settings: Settings, onBack: () -> Unit, go: (String) -> 
     Page("App drawer", onBack) {
         Section("Search")
         ToggleRow("Open the keyboard right away", settings.autoKeyboard, subtitle = "Start typing the moment you swipe to the drawer.") { v -> update { it.copy(autoKeyboard = v) } }
+        ToggleRow("Prefer Latin keyboard", settings.preferLatinKeyboard, subtitle = "Ask your keyboard to use English for app search. Some keyboards may ignore this.") { v -> update { it.copy(preferLatinKeyboard = v) } }
         ToggleRow("Open when one app is left", settings.autoLaunch, subtitle = "Launches the app as soon as your search matches only one.") { v -> update { it.copy(autoLaunch = v) } }
 
         Section("List")

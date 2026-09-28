@@ -52,6 +52,8 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.intl.Locale
+import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import pw.rkd.launcher.Graph
@@ -213,6 +215,7 @@ fun DrawerScreen(
                     capitalization = KeyboardCapitalization.None,
                     autoCorrectEnabled = false,
                     imeAction = ImeAction.Go,
+                    hintLocales = if (settings.preferLatinKeyboard) LocaleList(Locale("en")) else null,
                 ),
                 keyboardActions = KeyboardActions(onAny = { results.firstOrNull()?.takeIf { searching }?.let(onLaunch) }),
                 decorationBox = { inner ->

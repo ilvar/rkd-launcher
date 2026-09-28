@@ -36,7 +36,7 @@ class SettingsMigrationTest {
     }
 
     @Test fun `settings survive a round trip`() {
-        val s = Settings(clockStyle = ClockStyle.SPLIT, splitSide = SplitSide.SCREEN_TIME, showCalendar = true, doubleTapLock = false, musicAutoHide = false, showWeather = true, weatherApp = "app:weather", showWallpaper = true, wallpaperUri = "content://example/image")
+        val s = Settings(clockStyle = ClockStyle.SPLIT, splitSide = SplitSide.SCREEN_TIME, showCalendar = true, doubleTapLock = false, musicAutoHide = false, showWeather = true, weatherApp = "app:weather", showWallpaper = true, wallpaperUri = "content://example/image", preferLatinKeyboard = true)
         assertEquals(s, Settings.fromJson(s.toJson()))
     }
 
