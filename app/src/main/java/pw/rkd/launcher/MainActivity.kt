@@ -169,6 +169,7 @@ private fun Launcher(settings: Settings, homePresses: Flow<Boolean>) {
         homePresses.collect { openApps ->
             menuApp = null
             query = ""
+            wantsSearchFocus = openApps
             pager.animateScrollToPage(if (openApps) 1 else 0)
         }
     }
