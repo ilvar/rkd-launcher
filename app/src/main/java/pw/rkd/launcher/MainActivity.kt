@@ -57,6 +57,8 @@ import kotlinx.coroutines.launch
 /** The home screen (page 0) and, one swipe to the left, the app drawer (page 1). */
 class MainActivity : ComponentActivity() {
     private val homePresses = MutableSharedFlow<Boolean>(extraBufferCapacity = 4)
+    private val homePressState = HomePressState()
+    private var pendingHomePress: Boolean? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,14 +78,27 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        homePressState.onResume()
+        // Android delivers a new intent while the Activity is paused, then resumes it. Move the
+        // pager only after resume so a lifecycle reset cannot undo the drawer transition.
+        pendingHomePress?.let(homePresses::tryEmit)
+        pendingHomePress = null
+    }
+
+    override fun onStop() {
+        homePressState.onStop()
+        super.onStop()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         // A second Home press opens apps; coming back from another app starts on the home page.
         if (intent.action == Intent.ACTION_MAIN) {
-            // The HOME intent can pause this Activity briefly. Window focus distinguishes a
-            // repeat press from returning from another task (as Android's Launcher3 does).
-            val alreadyOnHome = hasWindowFocus() && intent.flags and Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT == 0
-            homePresses.tryEmit(alreadyOnHome)
+            // The HOME transition can briefly take window focus, even on a repeat press. Only
+            // an actual stop means we were returning from another app.
+            pendingHomePress = homePressState.onHomeIntent()
         }
     }
 }
@@ -154,6 +169,7 @@ private fun Launcher(settings: Settings, homePresses: Flow<Boolean>) {
         homePresses.collect { openApps ->
             menuApp = null
             query = ""
+            wantsSearchFocus = openApps
             pager.animateScrollToPage(if (openApps) 1 else 0)
         }
     }

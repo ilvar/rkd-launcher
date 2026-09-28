@@ -219,6 +219,7 @@ fun HomeScreen(
     var showingTodos by remember { mutableStateOf(false) }
     LaunchedEffect(resumeCount) { Graph.settings.update { it } }
     var choosingMusicApp by remember { mutableStateOf(false) }
+    var choosingWeatherApp by remember { mutableStateOf(false) }
     var choosingNoteApp by remember { mutableStateOf(false) }
     var noteMenu by remember { mutableStateOf(false) }
     var editingNoteLink by remember { mutableStateOf(false) }
@@ -423,9 +424,11 @@ fun HomeScreen(
                         weather != null -> "${weather!!.temperature}°  ·  ${weather!!.description}"
                         else -> "Weather unavailable  ·  Retry  →"
                     },
-                    Modifier.fillMaxWidth().clickable {
+                    Modifier.fillMaxWidth().press(onLongClick = { choosingWeatherApp = true }) {
                         if (!weatherAccess) askWeather.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
-                        else weatherRetry++
+                        else if (weather != null && settings.weatherApp.isNotBlank()) {
+                            apps.firstOrNull { it.key == settings.weatherApp }?.let(onLaunch) ?: run { weatherRetry++ }
+                        } else weatherRetry++
                     }.padding(horizontal = 12.dp, vertical = 3.dp),
                     size = 13.sp, color = c.dim, align = TextAlign.Center, maxLines = 1,
                 )
@@ -566,6 +569,16 @@ fun HomeScreen(
     if (choosingClockTap) ClockTapDialog(settings, apps) { choosingClockTap = false }
 
     val visibleApps = remember(apps, settings.hidden) { apps.filter { it.key !in settings.hidden } }
+    if (choosingWeatherApp) {
+        AppPickerDialog(
+            title = "Weather app",
+            subtitle = "Opens when you tap the weather line. Without an app, tapping refreshes the weather.",
+            apps = visibleApps,
+            onDismiss = { choosingWeatherApp = false },
+            leading = listOf("None (tap to refresh)" to { Graph.settings.update { it.copy(weatherApp = "") } }),
+            onPick = { app -> Graph.settings.update { it.copy(weatherApp = app.key) } },
+        )
+    }
     if (choosingMusicApp) {
         MusicAppPicker(
             apps = visibleApps,

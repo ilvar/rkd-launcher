@@ -169,13 +169,14 @@ fun DrawerScreen(
     }
 
     // The keyboard only ever opens on purpose: by the "open right away" setting, by swiping up on
-    // the home screen, or by tapping the search bar. In every other case make sure it is closed.
-    LaunchedEffect(isActive) {
+    // the home screen, a repeat Home press, or by tapping the search bar. Clear focus on exit;
+    // consuming a one-time focus request must not immediately hide the keyboard again.
+    LaunchedEffect(isActive, wantsSearchFocus) {
         if (isActive && (settings.autoKeyboard || wantsSearchFocus)) {
             searchFocus.requestFocus()
             keyboard?.show()
             onSearchFocusHandled()
-        } else {
+        } else if (!isActive) {
             focusManager.clearFocus()
             keyboard?.hide()
         }

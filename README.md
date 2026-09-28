@@ -163,7 +163,8 @@ secrets `RKD_CI_KEYSTORE_BASE64` and `RKD_CI_KEYSTORE_PASSWORD` first. The PKCS#
 use alias `focus-ci`, with the same key and store password. Keep the key for future updates.
 The release workflow uses `RKD_PUBLISHING` and `RKD_*` secrets in the `release` environment;
 the optional F-Droid submit job uses `RKD_FDROID_GITLAB_TOKEN` and
-`RKD_FDROID_GITLAB_FORK`.
+`RKD_FDROID_GITLAB_FORK`. In each workflow, an unset `RKD_` secret or variable falls back to
+the corresponding `FOCUS_` name.
 
 **Versions.** `baseVersion` in `app/build.gradle.kts` is the visible release name (now `1.2.0`).
 The Android `versionCode` is the commit count, so a later merge can update an installed APK even

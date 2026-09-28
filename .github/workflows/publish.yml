@@ -43,7 +43,7 @@ env:
 jobs:
   publish:
     name: Sign, publish to the site and the release page
-    if: github.ref == 'refs/heads/main' && vars.RKD_PUBLISHING == 'on'
+    if: github.ref == 'refs/heads/main' && (vars.RKD_PUBLISHING || vars.FOCUS_PUBLISHING) == 'on'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     environment:
@@ -97,10 +97,10 @@ jobs:
       - name: Build and sign
         if: steps.version.outputs.exists == 'false'
         env:
-          KEYSTORE_B64: ${{ secrets.RKD_KEYSTORE_B64 }}
-          STORE_PASSWORD: ${{ secrets.RKD_STORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.RKD_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.RKD_KEY_PASSWORD }}
+          KEYSTORE_B64: ${{ secrets.RKD_KEYSTORE_B64 || secrets.FOCUS_KEYSTORE_B64 }}
+          STORE_PASSWORD: ${{ secrets.RKD_STORE_PASSWORD || secrets.FOCUS_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.RKD_KEY_ALIAS || secrets.FOCUS_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.RKD_KEY_PASSWORD || secrets.FOCUS_KEY_PASSWORD }}
         run: |
           [ -n "$KEYSTORE_B64" ] && [ -n "$STORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ] \
             || { echo "::error::the signing secrets are missing from the release environment: run site/setup-ci-publishing.sh"; exit 1; }
@@ -158,9 +158,9 @@ jobs:
 
       - name: Upload to the server
         env:
-          DEPLOY_KEY: ${{ secrets.RKD_DEPLOY_SSH_KEY }}
-          DEPLOY_TARGET: ${{ secrets.RKD_DEPLOY_TARGET }}
-          DEPLOY_KNOWN_HOSTS: ${{ secrets.RKD_DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_KEY: ${{ secrets.RKD_DEPLOY_SSH_KEY || secrets.FOCUS_DEPLOY_SSH_KEY }}
+          DEPLOY_TARGET: ${{ secrets.RKD_DEPLOY_TARGET || secrets.FOCUS_DEPLOY_TARGET }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.RKD_DEPLOY_KNOWN_HOSTS || secrets.FOCUS_DEPLOY_KNOWN_HOSTS }}
         run: |
           [ -n "$DEPLOY_KEY" ] && [ -n "$DEPLOY_TARGET" ] && [ -n "$DEPLOY_KNOWN_HOSTS" ] \
             || { echo "::error::the upload secrets are missing from the release environment: run site/setup-ci-publishing.sh"; exit 1; }

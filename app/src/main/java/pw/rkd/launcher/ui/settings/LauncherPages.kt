@@ -57,7 +57,7 @@ private fun update(transform: (Settings) -> Settings) = Graph.settings.update(tr
 
 // ---- Home screen -----------------------------------------------------------------------------
 
-private enum class HomeDialog { NONE, CLOCK, SPLIT_SIDE, RING, TAP, TIME_FORMAT, ALIGN, COUNT, COLUMNS, LEFT, RIGHT, CALENDAR, MUSIC_APP, NOTE_APP }
+private enum class HomeDialog { NONE, CLOCK, SPLIT_SIDE, RING, TAP, TIME_FORMAT, ALIGN, COUNT, COLUMNS, LEFT, RIGHT, CALENDAR, WEATHER_APP, MUSIC_APP, NOTE_APP }
 
 @Composable
 internal fun HomePage(settings: Settings, apps: List<AppEntry>, onBack: () -> Unit, go: (String) -> Unit) {
@@ -121,6 +121,9 @@ internal fun HomePage(settings: Settings, apps: List<AppEntry>, onBack: () -> Un
             update { it.copy(showWeather = v) }
             if (v && !WeatherRepository.hasAccess(context)) askWeather.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
         }
+        SettingRow("Weather app", subtitle = "Tap the weather line to open this app. Long-press the line to change it.",
+            value = apps.firstOrNull { it.key == settings.weatherApp }?.label ?: "None (tap to refresh)",
+            enabled = settings.showWeather, onClick = { dialog = HomeDialog.WEATHER_APP })
 
         Section("Sections")
         ToggleRow(
@@ -225,6 +228,13 @@ internal fun HomePage(settings: Settings, apps: List<AppEntry>, onBack: () -> Un
             onPick = { key, keys -> update { it.copy(calendarKey = key, calendarKeys = keys) } },
         )
         HomeDialog.TIME_FORMAT -> ChoiceDialog("Time format", TimeFormat.entries.map { it to it.label }, settings.timeFormat, close) { v -> update { it.copy(timeFormat = v) } }
+        HomeDialog.WEATHER_APP -> AppPickerDialog(
+            title = "Weather app",
+            apps = apps.filter { it.key !in settings.hidden },
+            onDismiss = close,
+            leading = listOf("None (tap to refresh)" to { update { it.copy(weatherApp = "") } }),
+            onPick = { app -> update { it.copy(weatherApp = app.key) } },
+        )
         HomeDialog.ALIGN -> ChoiceDialog("Alignment", HomeAlign.entries.map { it to it.label }, settings.homeAlign, close) { v -> update { it.copy(homeAlign = v) } }
         HomeDialog.MUSIC_APP -> MusicAppPicker(
             apps = apps.filter { it.key !in settings.hidden },
