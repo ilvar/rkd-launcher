@@ -193,8 +193,8 @@ jobs:
 
       - name: Put the recipe on the fork; update the open merge request, or open one if there is none
         env:
-          GITLAB_TOKEN: ${{ secrets.RKD_FDROID_GITLAB_TOKEN }}
-          FORK: ${{ vars.RKD_FDROID_GITLAB_FORK }}
+          GITLAB_TOKEN: ${{ secrets.RKD_FDROID_GITLAB_TOKEN || secrets.FOCUS_FDROID_GITLAB_TOKEN }}
+          FORK: ${{ vars.RKD_FDROID_GITLAB_FORK || vars.FOCUS_FDROID_GITLAB_FORK }}
           VERSION: ${{ needs.check.outputs.version }}
           RECIPE_DIR: recipe
         run: python3 fdroid/submit.py

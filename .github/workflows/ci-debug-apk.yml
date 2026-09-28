@@ -27,11 +27,11 @@ jobs:
 
       - name: Load persistent signing key
         env:
-          KEYSTORE_BASE64: ${{ secrets.RKD_CI_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.RKD_CI_KEYSTORE_PASSWORD }}
+          KEYSTORE_BASE64: ${{ secrets.RKD_CI_KEYSTORE_BASE64 || secrets.FOCUS_CI_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.RKD_CI_KEYSTORE_PASSWORD || secrets.FOCUS_CI_KEYSTORE_PASSWORD }}
         run: |
           if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ]; then
-            echo 'Configure RKD_CI_KEYSTORE_BASE64 and RKD_CI_KEYSTORE_PASSWORD repository secrets.' >&2
+            echo 'Configure RKD_CI_KEYSTORE_BASE64 and RKD_CI_KEYSTORE_PASSWORD (or FOCUS_CI_KEYSTORE_BASE64 and FOCUS_CI_KEYSTORE_PASSWORD) repository secrets.' >&2
             exit 1
           fi
           umask 077
@@ -40,7 +40,7 @@ jobs:
 
       - name: Build debug APK
         env:
-          RKD_CI_KEYSTORE_PASSWORD: ${{ secrets.RKD_CI_KEYSTORE_PASSWORD }}
+          RKD_CI_KEYSTORE_PASSWORD: ${{ secrets.RKD_CI_KEYSTORE_PASSWORD || secrets.FOCUS_CI_KEYSTORE_PASSWORD }}
         run: ./gradlew -Dorg.gradle.java.home="$JAVA_HOME" :app:assembleDebug
 
       - name: Upload APK
