@@ -402,7 +402,7 @@ private fun normalize(text: String): String =
 /**
  * Filters [apps] by [query]. Best matches first: name starts with the query, then a word in the
  * name starts with it, then it appears anywhere, then initials ("gm" finds Google Maps), and
- * finally a loose in-order match for typos of three letters or more.
+ * then names one or two edits away, and finally a loose in-order match.
  */
 fun searchApps(apps: List<AppEntry>, query: String, names: Map<String, String> = emptyMap()): List<AppEntry> {
     val q = normalize(query)
@@ -410,18 +410,64 @@ fun searchApps(apps: List<AppEntry>, query: String, names: Map<String, String> =
     val ranked = ArrayList<Pair<Int, AppEntry>>()
     for (app in apps) {
         val name = names[app.key] ?: normalize(app.label)
-        val words = name.split(' ', '-', '_', '.', ':').filter { it.isNotEmpty() }
-        val rank = when {
-            name.startsWith(q) -> 0
-            words.any { it.startsWith(q) } -> 1
-            name.contains(q) -> 2
-            words.size > 1 && words.map { it[0] }.joinToString("").startsWith(q) -> 3
-            q.length >= 3 && isSubsequence(q, name) -> 4
-            else -> continue
-        }
+        val rank = searchRank(q, name) ?: continue
         ranked += rank to app
     }
     return ranked.sortedBy { it.first }.map { it.second } // stable: alphabetical within a rank
+}
+
+/** Both arguments have already been normalized. Smaller ranks always appear first. */
+internal fun searchRank(query: String, name: String): Int? {
+    val words = name.split(' ', '-', '_', '.', ':').filter { it.isNotEmpty() }
+    return when {
+        name.startsWith(query) -> 0
+        words.any { it.startsWith(query) } -> 1
+        name.contains(query) -> 2
+        words.size > 1 && words.map { it[0] }.joinToString("").startsWith(query) -> 3
+        else -> when (fuzzyDistance(query, name, words)) {
+            1 -> 4
+            2 -> 5
+            else -> if (query.length >= 3 && isSubsequence(query, name)) 6 else null
+        }
+    }
+}
+
+/** Compare the whole label and word prefixes, so partial searches also tolerate typos. */
+internal fun fuzzyDistance(query: String, name: String, words: List<String>): Int {
+    // Two edits in a two-letter search would include most of the drawer.
+    if (query.length < 3) return 3
+    val limit = if (query.length == 3) 1 else 2
+    var best = editDistanceAtMost(query, name, limit)
+    for (word in words) {
+        for (length in (query.length - limit).coerceAtLeast(1)..(query.length + limit).coerceAtMost(word.length)) {
+            best = minOf(best, editDistanceAtMost(query, word.substring(0, length), limit))
+            if (best == 1) return best
+        }
+    }
+    return best
+}
+
+/** Standard Levenshtein distance, capped at [limit] + 1 to avoid unnecessary work. */
+private fun editDistanceAtMost(a: String, b: String, limit: Int): Int {
+    if (kotlin.math.abs(a.length - b.length) > limit) return limit + 1
+    var previous = IntArray(b.length + 1) { it }
+    var current = IntArray(b.length + 1)
+    for (i in a.indices) {
+        current[0] = i + 1
+        var rowMin = current[0]
+        for (j in b.indices) {
+            current[j + 1] = minOf(
+                previous[j + 1] + 1, current[j] + 1,
+                previous[j] + if (a[i] == b[j]) 0 else 1,
+            )
+            rowMin = minOf(rowMin, current[j + 1])
+        }
+        if (rowMin > limit) return limit + 1
+        val swap = previous
+        previous = current
+        current = swap
+    }
+    return previous[b.length].coerceAtMost(limit + 1)
 }
 
 private fun isSubsequence(needle: String, haystack: String): Boolean {
