@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -22,6 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import pw.rkd.launcher.ui.components.Label
+import pw.rkd.launcher.ui.components.FocusDialog
+import pw.rkd.launcher.ui.components.MenuRow
 import pw.rkd.launcher.ui.components.T
 import pw.rkd.launcher.ui.theme.LocalFocusColors
 
@@ -66,6 +69,20 @@ fun WidgetPage(controller: WidgetController) {
                             },
                         )
                     }
+                }
+            }
+        }
+    }
+    if (controller.pickerOpen) {
+        val widgets = controller.availableWidgets
+        FocusDialog(controller::dismissPicker, title = "Add widget", tall = true) {
+            LazyColumn(Modifier.weight(1f)) {
+                items(widgets, key = { "${it.provider.flattenToString()}:${it.profile.hashCode()}" }) { info ->
+                    val packageName = info.provider.packageName
+                    val appName = runCatching {
+                        context.packageManager.getApplicationLabel(context.packageManager.getApplicationInfo(packageName, 0)).toString()
+                    }.getOrDefault(packageName)
+                    MenuRow(info.loadLabel(context.packageManager), detail = appName) { controller.addWidget(info) }
                 }
             }
         }

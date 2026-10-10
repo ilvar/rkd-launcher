@@ -3,6 +3,7 @@ package pw.rkd.launcher.ui.widgets
 import android.app.Activity
 import android.appwidget.AppWidgetHost
 import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProviderInfo
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
@@ -21,64 +22,101 @@ class WidgetController(private val activity: Activity) {
     val manager = AppWidgetManager.getInstance(activity)
     var slots by mutableStateOf(readSlots())
         private set
+    var pickerOpen by mutableStateOf(false)
+        private set
+
+    val availableWidgets: List<AppWidgetProviderInfo>
+        get() = manager.installedProviders.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) {
+            it.loadLabel(activity.packageManager)
+        })
 
     private var pendingId: Int
         get() = prefs.getInt("pending", -1)
         set(value) { prefs.edit().putInt("pending", value).apply() }
-    val isPicking: Boolean get() = pendingId > 0
+    val isPicking: Boolean get() = pickerOpen || pendingId > 0
 
     fun startListening() = host.startListening()
     fun stopListening() = host.stopListening()
 
-    @Suppress("DEPRECATION")
     fun pickWidget() {
+        if (availableWidgets.isEmpty()) {
+            Toast.makeText(activity, "No widgets available", Toast.LENGTH_SHORT).show()
+            return
+        }
+        pickerOpen = true
+    }
+
+    fun dismissPicker() { pickerOpen = false }
+
+    @Suppress("DEPRECATION")
+    fun addWidget(info: AppWidgetProviderInfo) {
+        pickerOpen = false
         if (pendingId > 0) discard(pendingId)
         val id = host.allocateAppWidgetId()
         pendingId = id
         try {
-            activity.startActivityForResult(
-                Intent(AppWidgetManager.ACTION_APPWIDGET_PICK).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id),
-                PICK_REQUEST,
-            )
+            if (manager.bindAppWidgetIdIfAllowed(id, info.profile, info.provider, null)) {
+                completeBinding(id)
+            } else {
+                activity.startActivityForResult(Intent(AppWidgetManager.ACTION_APPWIDGET_BIND).apply {
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, info.provider)
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER_PROFILE, info.profile)
+                }, BIND_REQUEST)
+            }
         } catch (_: Exception) {
             discard(id)
-            Toast.makeText(activity, "No widget picker available", Toast.LENGTH_SHORT).show()
+            Toast.makeText(activity, "Could not add widget", Toast.LENGTH_SHORT).show()
         }
     }
 
     fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
-        if (requestCode != PICK_REQUEST && requestCode != CONFIGURE_REQUEST) return false
+        if (requestCode != BIND_REQUEST && requestCode != PICK_REQUEST && requestCode != CONFIGURE_REQUEST) return false
         val original = pendingId
         if (original <= 0) return true
         val id = data?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, original) ?: original
         if (id != original && requestCode == PICK_REQUEST) host.deleteAppWidgetId(original)
         if (resultCode != Activity.RESULT_OK || id <= 0) {
-            discard(id)
+            discard(original)
             return true
         }
-        if (requestCode == PICK_REQUEST) {
-            val info = manager.getAppWidgetInfo(id)
-            if (info == null) {
-                discard(id)
-                return true
-            }
-            pendingId = id
-            if (info.configure != null) {
-                try {
-                    host.startAppWidgetConfigureActivityForResult(activity, id, 0, CONFIGURE_REQUEST, null)
-                } catch (_: Exception) {
-                    discard(id)
-                    Toast.makeText(activity, "Could not configure widget", Toast.LENGTH_SHORT).show()
-                }
-                return true
-            }
+        if (requestCode == BIND_REQUEST && manager.getAppWidgetInfo(original) == null) {
+            discard(original)
+            return true
         }
+        if (requestCode != CONFIGURE_REQUEST) {
+            pendingId = id
+            completeBinding(id)
+            return true
+        }
+        finishAdding(id)
+        return true
+    }
+
+    private fun completeBinding(id: Int) {
+        val info = manager.getAppWidgetInfo(id)
+        if (info == null) {
+            discard(id)
+            return
+        }
+        if (info.configure != null) {
+            try {
+                host.startAppWidgetConfigureActivityForResult(activity, id, 0, CONFIGURE_REQUEST, null)
+            } catch (_: Exception) {
+                discard(id)
+                Toast.makeText(activity, "Could not configure widget", Toast.LENGTH_SHORT).show()
+            }
+            return
+        }
+        finishAdding(id)
+    }
+
+    private fun finishAdding(id: Int) {
         val minHeightPx = manager.getAppWidgetInfo(id)?.minHeight ?: 0
         val minHeightDp = (minHeightPx / activity.resources.displayMetrics.density).toInt()
         slots = slots + WidgetSlot(id, minHeightDp.coerceIn(180, 720))
         pendingId = -1
         save()
-        return true
     }
 
     fun resize(id: Int, change: Int) {
@@ -123,5 +161,6 @@ class WidgetController(private val activity: Activity) {
     companion object {
         private const val PICK_REQUEST = 6101
         private const val CONFIGURE_REQUEST = 6102
+        private const val BIND_REQUEST = 6103
     }
 }
