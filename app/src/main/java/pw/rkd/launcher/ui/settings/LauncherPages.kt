@@ -312,7 +312,7 @@ internal fun FastAppsPage(settings: Settings, apps: List<AppEntry>, onBack: () -
 internal fun WidgetsSettingsPage(settings: Settings, onBack: () -> Unit) {
     Page("Widgets page", onBack) {
         ToggleRow("Show widgets page", settings.showWidgetPage,
-            subtitle = "Swipe left from the app drawer to see full-width widgets.") { enabled ->
+            subtitle = "Swipe left from home to see full-width widgets. If app swiping is on, swipe left again for apps.") { enabled ->
             update { it.copy(showWidgetPage = enabled) }
         }
         Note("Add, resize, reorder, and remove widgets on the page itself. Widget layouts belong to this device; Android cannot restore their app bindings from a settings file.")
@@ -428,7 +428,7 @@ internal fun GesturesPage(settings: Settings, status: SetupStatus, onBack: () ->
         Note("Press Home on the main screen to open apps; press it again to return. Long-press empty space for settings.")
         ToggleRow("Swipe down for notifications", settings.swipeDownNotifications) { v -> update { it.copy(swipeDownNotifications = v) } }
         ToggleRow("Swipe up to search", settings.swipeUpSearch, subtitle = "Jumps to the drawer with the keyboard open.") { v -> update { it.copy(swipeUpSearch = v) } }
-        ToggleRow("Swipe left for apps", settings.swipeLeftApps, subtitle = "From the home screen. Swiping between the app drawer and widgets still works.") { v -> update { it.copy(swipeLeftApps = v) } }
+        ToggleRow("Swipe left for apps", settings.swipeLeftApps, subtitle = "From home, or from widgets when enabled. Home opens apps even when this is off.") { v -> update { it.copy(swipeLeftApps = v) } }
         // Also under App drawer. It is looked for here too: it is what swiping to the drawer does.
         ToggleRow("Keyboard opens with the drawer", settings.autoKeyboard, subtitle = "Start typing the moment you swipe to your apps.") { v -> update { it.copy(autoKeyboard = v) } }
         ToggleRow("Swipe right for web search", settings.swipeRightSearch, subtitle = "Opens your selected search engine.") { v -> update { it.copy(swipeRightSearch = v) } }

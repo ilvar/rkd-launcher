@@ -25,10 +25,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -56,7 +60,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 
-/** Home (page 0), apps (page 1), and an optional widgets page (page 2). */
+/** Home (page 0), optional widgets (page 1), then apps. */
 class MainActivity : ComponentActivity() {
     private val widgets by lazy { WidgetController(this) }
     private val homePresses = MutableSharedFlow<Boolean>(extraBufferCapacity = 4)
@@ -121,8 +125,8 @@ class MainActivity : ComponentActivity() {
 private var lastBackfill = 0L
 
 /** Repeated Home opens apps from home and returns to home from either secondary page. */
-internal fun homeDestination(alreadyInLauncher: Boolean, currentPage: Int): Int =
-    if (alreadyInLauncher && currentPage == 0) 1 else 0
+internal fun homeDestination(alreadyInLauncher: Boolean, currentPage: Int, appsPage: Int = 1): Int =
+    if (alreadyInLauncher && currentPage == 0) appsPage else 0
 
 @Composable
 private fun Launcher(settings: Settings, homePresses: Flow<Boolean>, widgets: WidgetController) {
@@ -135,7 +139,8 @@ private fun Launcher(settings: Settings, homePresses: Flow<Boolean>, widgets: Wi
     val pendingReview by Graph.state.pendingReview.collectAsStateWithLifecycle()
     val tip by Graph.state.tip.collectAsStateWithLifecycle()
 
-    val pager = rememberPagerState { if (settings.showWidgetPage) 3 else 2 }
+    val appsPage = if (settings.showWidgetPage) 2 else 1
+    val pager = rememberPagerState { appsPage + 1 }
     LaunchedEffect(settings.showWidgetPage) {
         if (!settings.showWidgetPage && pager.currentPage > 1) pager.scrollToPage(1)
     }
@@ -144,7 +149,7 @@ private fun Launcher(settings: Settings, homePresses: Flow<Boolean>, widgets: Wi
     // and not only once the page has settled (the keyboard would come late). So the keyboard
     // rises while the page glides in, and falls while it glides out.
     val pagerDragged by pager.interactionSource.collectIsDraggedAsState()
-    val drawerActive by remember { derivedStateOf { if (pagerDragged) pager.settledPage == 1 else pager.targetPage == 1 } }
+    val drawerActive by remember(appsPage) { derivedStateOf { if (pagerDragged) pager.settledPage == appsPage else pager.targetPage == appsPage } }
     var query by remember { mutableStateOf("") }
     var menuApp by remember { mutableStateOf<AppEntry?>(null) }
     var wantsSearchFocus by remember { mutableStateOf(false) }
@@ -187,14 +192,14 @@ private fun Launcher(settings: Settings, homePresses: Flow<Boolean>, widgets: Wi
     }
 
     // Arrived in the app list, by whichever way: that tip is learnt.
-    LaunchedEffect(pager.settledPage) { if (pager.settledPage == 1) Graph.state.did(Tip.SWIPE_LEFT) }
+    LaunchedEffect(pager.settledPage, appsPage) { if (pager.settledPage == appsPage) Graph.state.did(Tip.SWIPE_LEFT) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(homePresses, appsPage) {
         homePresses.collect { openApps ->
-            val destination = homeDestination(openApps, pager.currentPage)
+            val destination = homeDestination(openApps, pager.currentPage, appsPage)
             menuApp = null
             query = ""
-            wantsSearchFocus = destination == 1
+            wantsSearchFocus = destination == appsPage
             pager.animateScrollToPage(destination)
         }
     }
@@ -205,14 +210,24 @@ private fun Launcher(settings: Settings, homePresses: Flow<Boolean>, widgets: Wi
     }
 
     val launch: (AppEntry) -> Unit = { entry -> launchApp(context, scope, entry) }
+    // The widgets swipe remains available when the apps swipe is off. Consume only the
+    // forward drag from widgets to apps; swiping back to home still works.
+    val blockAppsSwipe = remember(settings.swipeLeftApps, settings.showWidgetPage, pager) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset =
+                if (settings.showWidgetPage && !settings.swipeLeftApps &&
+                    pager.settledPage == 1 && available.x < 0f
+                ) Offset(available.x, 0f) else Offset.Zero
+        }
+    }
 
     HorizontalPager(
         state = pager,
-        userScrollEnabled = settings.swipeLeftApps || pager.settledPage != 0,
+        userScrollEnabled = settings.swipeLeftApps || settings.showWidgetPage || pager.settledPage != 0,
         // There is no page to the left of home, so the pager ignores that swipe. Watch it on the
         // way down (Initial pass, nothing consumed) and open the web search instead, the way the
         // page left of a stock home screen does.
-        modifier = Modifier.fillMaxSize().pointerInput(settings.swipeRightSearch) {
+        modifier = Modifier.fillMaxSize().nestedScroll(blockAppsSwipe).pointerInput(settings.swipeRightSearch) {
             if (!settings.swipeRightSearch) return@pointerInput
             val threshold = 72.dp.toPx()
             awaitEachGesture {
@@ -262,13 +277,13 @@ private fun Launcher(settings: Settings, homePresses: Flow<Boolean>, widgets: Wi
                     onAppMenu = { Graph.state.did(Tip.APP_MENU); menuApp = it },
                     onOpenDrawer = { focusSearch ->
                         wantsSearchFocus = focusSearch
-                        scope.launch { pager.animateScrollToPage(1) }
+                        scope.launch { pager.animateScrollToPage(appsPage) }
                     },
                     onOpenSettings = { route -> context.startActivity(SettingsActivity.intent(context, route)) },
                     onOpenReview = { week -> context.startActivity(ReviewActivity.intent(context, week)) },
                 )
                 }
-            } else if (page == 1) {
+            } else if (page == appsPage) {
                 Box(Modifier.fillMaxSize().background(LocalFocusColors.current.bg)) {
                 DrawerScreen(
                     settings = settings,

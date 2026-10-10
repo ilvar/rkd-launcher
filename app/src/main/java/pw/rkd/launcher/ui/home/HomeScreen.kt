@@ -510,7 +510,9 @@ fun HomeScreen(
             // Fast apps
             if (favorites.isEmpty()) {
                 T(
-                    "Swipe left for your apps.\nLong-press one to pin it here.",
+                    (if (settings.showWidgetPage && settings.swipeLeftApps) "Swipe left twice for your apps."
+                    else if (settings.swipeLeftApps) "Swipe left for your apps."
+                    else "Press Home for your apps.") + "\nLong-press one to pin it here.",
                     Modifier.fillMaxWidth().clickable { onOpenDrawer(false) }.padding(horizontal = 12.dp, vertical = 8.dp),
                     size = 15.sp, color = c.dim, align = settings.homeAlign.text(), lineHeight = 23.sp,
                 )
