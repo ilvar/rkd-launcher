@@ -34,6 +34,7 @@ import pw.rkd.launcher.data.HomeAlign
 import pw.rkd.launcher.data.LaunchAnimation
 import pw.rkd.launcher.data.MAX_FAVORITES
 import pw.rkd.launcher.data.RingMode
+import pw.rkd.launcher.data.SearchEngine
 import pw.rkd.launcher.data.SHORTCUT_CAMERA
 import pw.rkd.launcher.data.SHORTCUT_PHONE
 import pw.rkd.launcher.data.Settings
@@ -422,16 +423,25 @@ internal fun AppearancePage(settings: Settings, onBack: () -> Unit) {
 
 @Composable
 internal fun GesturesPage(settings: Settings, status: SetupStatus, onBack: () -> Unit, go: (String) -> Unit) {
+    var chooseSearchEngine by remember { mutableStateOf(false) }
     Page("Gestures", onBack) {
-        Note("Swiping left always opens the app drawer, and a long-press on empty space opens these settings.")
+        Note("Press Home on the main screen to open apps; press it again to return. Long-press empty space for settings.")
         ToggleRow("Swipe down for notifications", settings.swipeDownNotifications) { v -> update { it.copy(swipeDownNotifications = v) } }
         ToggleRow("Swipe up to search", settings.swipeUpSearch, subtitle = "Jumps to the drawer with the keyboard open.") { v -> update { it.copy(swipeUpSearch = v) } }
+        ToggleRow("Swipe left for apps", settings.swipeLeftApps, subtitle = "From the home screen. Swiping between the app drawer and widgets still works.") { v -> update { it.copy(swipeLeftApps = v) } }
         // Also under App drawer. It is looked for here too: it is what swiping to the drawer does.
         ToggleRow("Keyboard opens with the drawer", settings.autoKeyboard, subtitle = "Start typing the moment you swipe to your apps.") { v -> update { it.copy(autoKeyboard = v) } }
-        ToggleRow("Swipe right for web search", settings.swipeRightSearch, subtitle = "Opens the Google search box, like the page left of a stock home screen.") { v -> update { it.copy(swipeRightSearch = v) } }
+        ToggleRow("Swipe right for web search", settings.swipeRightSearch, subtitle = "Opens your selected search engine.") { v -> update { it.copy(swipeRightSearch = v) } }
+        SettingRow("Search engine", value = settings.searchEngine.label, enabled = settings.swipeRightSearch,
+            subtitle = "Private options open in your browser; System search uses your phone's search app.",
+            onClick = { chooseSearchEngine = true })
         ToggleRow("Double tap to lock", settings.doubleTapLock, subtitle = "Turns the screen off. Uses the Rkd Launcher timer service.") { v -> update { it.copy(doubleTapLock = v) } }
         if (settings.doubleTapLock && !status.timerService) {
             Note("The Rkd Launcher timer service is off, so double tap cannot lock yet.  Open setup  →") { go(Routes.SETUP) }
         }
+    }
+    if (chooseSearchEngine) ChoiceDialog("Search engine", SearchEngine.entries.map { it to it.label },
+        settings.searchEngine, { chooseSearchEngine = false }) { selected ->
+        update { it.copy(searchEngine = selected) }
     }
 }

@@ -5,6 +5,7 @@ import android.app.ActivityOptions
 import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.os.SystemClock
 import android.util.Log
@@ -13,6 +14,7 @@ import pw.rkd.launcher.BlockActivity
 import pw.rkd.launcher.Graph
 import pw.rkd.launcher.data.AppEntry
 import pw.rkd.launcher.data.LaunchAnimation
+import pw.rkd.launcher.data.SearchEngine
 import pw.rkd.launcher.util.Perms
 import java.time.LocalDate
 import kotlinx.coroutines.CoroutineScope
@@ -97,15 +99,19 @@ fun launchApp(context: Context, scope: CoroutineScope, entry: AppEntry) {
     }
 }
 
-/** The phone's web search box (the Google app where there is one), as the page left of home. */
-fun openWebSearch(context: Context) {
-    val ok = Perms.start(
-        context,
-        Intent(SearchManager.INTENT_ACTION_GLOBAL_SEARCH).setPackage("com.google.android.googlequicksearchbox"),
-        Intent(SearchManager.INTENT_ACTION_GLOBAL_SEARCH),
-        Intent(Intent.ACTION_WEB_SEARCH).putExtra(SearchManager.QUERY, ""),
-        options = launchOptions(context),
-    )
+/** Open the selected engine in the browser, or the phone's own search UI. */
+fun openWebSearch(context: Context, engine: SearchEngine) {
+    val ok = if (engine.homeUrl != null) {
+        Perms.start(context, Intent(Intent.ACTION_VIEW, Uri.parse(engine.homeUrl)), options = launchOptions(context))
+    } else {
+        Perms.start(
+            context,
+            Intent(SearchManager.INTENT_ACTION_GLOBAL_SEARCH).setPackage("com.google.android.googlequicksearchbox"),
+            Intent(SearchManager.INTENT_ACTION_GLOBAL_SEARCH),
+            Intent(Intent.ACTION_WEB_SEARCH).putExtra(SearchManager.QUERY, ""),
+            options = launchOptions(context),
+        )
+    }
     if (!ok) Toast.makeText(context, "No search app found", Toast.LENGTH_SHORT).show()
 }
 

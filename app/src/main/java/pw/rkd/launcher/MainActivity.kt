@@ -120,6 +120,10 @@ class MainActivity : ComponentActivity() {
 
 private var lastBackfill = 0L
 
+/** Repeated Home opens apps from home and returns to home from either secondary page. */
+internal fun homeDestination(alreadyInLauncher: Boolean, currentPage: Int): Int =
+    if (alreadyInLauncher && currentPage == 0) 1 else 0
+
 @Composable
 private fun Launcher(settings: Settings, homePresses: Flow<Boolean>, widgets: WidgetController) {
     val context = LocalContext.current
@@ -187,10 +191,11 @@ private fun Launcher(settings: Settings, homePresses: Flow<Boolean>, widgets: Wi
 
     LaunchedEffect(Unit) {
         homePresses.collect { openApps ->
+            val destination = homeDestination(openApps, pager.currentPage)
             menuApp = null
             query = ""
-            wantsSearchFocus = openApps
-            pager.animateScrollToPage(if (openApps) 1 else 0)
+            wantsSearchFocus = destination == 1
+            pager.animateScrollToPage(destination)
         }
     }
 
@@ -203,6 +208,7 @@ private fun Launcher(settings: Settings, homePresses: Flow<Boolean>, widgets: Wi
 
     HorizontalPager(
         state = pager,
+        userScrollEnabled = settings.swipeLeftApps || pager.settledPage != 0,
         // There is no page to the left of home, so the pager ignores that swipe. Watch it on the
         // way down (Initial pass, nothing consumed) and open the web search instead, the way the
         // page left of a stock home screen does.
@@ -217,7 +223,7 @@ private fun Launcher(settings: Settings, homePresses: Flow<Boolean>, widgets: Wi
                     if (!change.pressed) break
                     val moved = change.position - down.position
                     if (moved.x > threshold && moved.x > abs(moved.y) * 2) {
-                        openWebSearch(context)
+                        openWebSearch(context, settings.searchEngine)
                         Graph.state.did(Tip.SWIPE_RIGHT)
                         break
                     }
