@@ -308,6 +308,17 @@ internal fun FastAppsPage(settings: Settings, apps: List<AppEntry>, onBack: () -
 // ---- App drawer ------------------------------------------------------------------------------
 
 @Composable
+internal fun WidgetsSettingsPage(settings: Settings, onBack: () -> Unit) {
+    Page("Widgets page", onBack) {
+        ToggleRow("Show widgets page", settings.showWidgetPage,
+            subtitle = "Swipe left from the app drawer to see full-width widgets.") { enabled ->
+            update { it.copy(showWidgetPage = enabled) }
+        }
+        Note("Add, resize, reorder, and remove widgets on the page itself. Widget layouts belong to this device; Android cannot restore their app bindings from a settings file.")
+    }
+}
+
+@Composable
 internal fun DrawerPage(settings: Settings, onBack: () -> Unit, go: (String) -> Unit) {
     Page("App drawer", onBack) {
         Section("Search")

@@ -46,6 +46,8 @@ import pw.rkd.launcher.ui.theme.BlackTheme
 import pw.rkd.launcher.ui.theme.LocalFocusColors
 import pw.rkd.launcher.ui.theme.FocusTheme
 import pw.rkd.launcher.ui.theme.applyFocusWindow
+import pw.rkd.launcher.ui.widgets.WidgetController
+import pw.rkd.launcher.ui.widgets.WidgetPage
 import pw.rkd.launcher.util.Perms
 import kotlin.math.abs
 import kotlin.math.absoluteValue
@@ -54,8 +56,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 
-/** The home screen (page 0) and, one swipe to the left, the app drawer (page 1). */
+/** Home (page 0), apps (page 1), and an optional widgets page (page 2). */
 class MainActivity : ComponentActivity() {
+    private val widgets by lazy { WidgetController(this) }
     private val homePresses = MutableSharedFlow<Boolean>(extraBufferCapacity = 4)
     private val homePressState = HomePressState()
     private var pendingHomePress: Boolean? = null
@@ -74,7 +77,7 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(settings.dark, settings.hideStatusBar, settings.showWallpaper) {
                 applyFocusWindow(settings.dark || settings.showWallpaper, settings.hideStatusBar, settings.showWallpaper)
             }
-            FocusTheme(settings, transparentBackground = settings.showWallpaper) { Launcher(settings, homePresses) }
+            FocusTheme(settings, transparentBackground = settings.showWallpaper) { Launcher(settings, homePresses, widgets) }
         }
     }
 
@@ -88,8 +91,20 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
+        widgets.stopListening()
         homePressState.onStop()
         super.onStop()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        widgets.startListening()
+    }
+
+    @Deprecated("Android's AppWidgetHost configuration API uses activity request codes")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        widgets.onActivityResult(requestCode, resultCode, data)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -106,7 +121,7 @@ class MainActivity : ComponentActivity() {
 private var lastBackfill = 0L
 
 @Composable
-private fun Launcher(settings: Settings, homePresses: Flow<Boolean>) {
+private fun Launcher(settings: Settings, homePresses: Flow<Boolean>, widgets: WidgetController) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -116,7 +131,10 @@ private fun Launcher(settings: Settings, homePresses: Flow<Boolean>) {
     val pendingReview by Graph.state.pendingReview.collectAsStateWithLifecycle()
     val tip by Graph.state.tip.collectAsStateWithLifecycle()
 
-    val pager = rememberPagerState { 2 }
+    val pager = rememberPagerState { if (settings.showWidgetPage) 3 else 2 }
+    LaunchedEffect(settings.showWidgetPage) {
+        if (!settings.showWidgetPage && pager.currentPage > 1) pager.scrollToPage(1)
+    }
     // The drawer counts as open from the moment a swipe is let go towards it: not halfway through
     // the drag, where the finger can still turn back (the keyboard used to pop up and drop again),
     // and not only once the page has settled (the keyboard would come late). So the keyboard
@@ -155,10 +173,12 @@ private fun Launcher(settings: Settings, homePresses: Flow<Boolean>) {
     // Leaving the launcher (an app was opened, the screen went off) always resets it to page 0.
     LifecycleStartEffect(Unit) {
         onStopOrDispose {
-            query = ""
-            menuApp = null
-            wantsSearchFocus = false
-            scope.launch { pager.scrollToPage(0) }
+            if (!widgets.isPicking) {
+                query = ""
+                menuApp = null
+                wantsSearchFocus = false
+                scope.launch { pager.scrollToPage(0) }
+            }
         }
     }
 
@@ -242,7 +262,7 @@ private fun Launcher(settings: Settings, homePresses: Flow<Boolean>) {
                     onOpenReview = { week -> context.startActivity(ReviewActivity.intent(context, week)) },
                 )
                 }
-            } else {
+            } else if (page == 1) {
                 Box(Modifier.fillMaxSize().background(LocalFocusColors.current.bg)) {
                 DrawerScreen(
                     settings = settings,
@@ -259,6 +279,8 @@ private fun Launcher(settings: Settings, homePresses: Flow<Boolean>) {
                     hint = tip?.takeIf { it == Tip.APP_MENU }?.let { it.gesture + "  →  " + it.result },
                 )
                 }
+            } else {
+                WidgetPage(widgets)
             }
         }
     }
