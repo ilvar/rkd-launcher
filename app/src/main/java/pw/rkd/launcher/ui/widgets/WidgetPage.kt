@@ -95,8 +95,8 @@ fun WidgetPage(controller: WidgetController) {
                 val width = (info.minWidth / density).roundToInt().coerceAtLeast(0)
                 val height = (info.minHeight / density).roundToInt().coerceAtLeast(0)
                 WidgetChoice(info, appName, info.loadLabel(pm), "${width} × ${height} dp")
-            }.sortedWith(compareBy<WidgetChoice>(String.CASE_INSENSITIVE_ORDER) { it.app }
-                .thenBy(String.CASE_INSENSITIVE_ORDER) { it.widget })
+            }.sortedWith(compareBy<WidgetChoice> { it.app.lowercase() }
+                .thenBy { it.widget.lowercase() })
         }
         var query by remember(controller.pickerOpen) { mutableStateOf(TextFieldValue("")) }
         val shown = remember(widgets, query.text) {
