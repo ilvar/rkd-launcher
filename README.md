@@ -50,15 +50,14 @@ Built with Kotlin and Jetpack Compose, without the Material library, in about 6,
   briefcase outline after its name, drawn in the text colour: the launcher's one pictogram.
 - Two corner shortcuts (Phone / Camera by default). Long-press one to change it.
 - Everything you touch lights up softly and fades back (no ripples, no colour).
-- Gestures: swipe left = app drawer, swipe right = the phone's web search (the Google search box
-  where there is one, like the page left of a stock home screen), swipe up = app search,
+- Gestures: swipe left = app drawer, swipe right = the selected web search engine, swipe up = app search,
   swipe down = notifications, long-press empty space = settings, double tap = lock (on by default;
-  needs the timer service). The swipes other than the drawer's, and the double tap, can be
-  switched off in Settings → Gestures.
+  needs the timer service). The home screen's left and right swipes can each be switched off in
+  Settings → Gestures; that page also offers DuckDuckGo, Brave Search, Startpage, and Mojeek.
+  Press Home on the home screen to open apps, and again in apps to return home.
 
 **App drawer** (page 2)
 - Search bar, "installed in the last 24 hours", then every app alphabetically with an A–Z scrubber.
-
 - "Sort" under the search bar reorders the list: A–Z, most used, or most recently used (last 7
   days, from Android's own usage totals). The scrubber only shows for A–Z.
 - With an Android Work profile the list splits into **Personal** and **Work** tabs. Search always

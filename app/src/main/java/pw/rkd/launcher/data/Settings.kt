@@ -27,6 +27,15 @@ enum class DrawerSort(val label: String) { ALPHA("A–Z"), MOST_USED("Most used"
 
 enum class TimeFormat(val label: String) { SYSTEM("Follow system"), H24("24-hour"), H12("12-hour") }
 
+/** Where a right swipe on home opens a web search. */
+enum class SearchEngine(val label: String, val homeUrl: String?) {
+    SYSTEM("System search", null),
+    DUCKDUCKGO("DuckDuckGo", "https://duckduckgo.com/"),
+    BRAVE("Brave Search", "https://search.brave.com/"),
+    STARTPAGE("Startpage", "https://www.startpage.com/"),
+    MOJEEK("Mojeek", "https://www.mojeek.com/"),
+}
+
 const val MAX_FAVORITES = 16
 
 /** Corner shortcuts that resolve to whatever the phone's default dialer / camera is. */
@@ -143,8 +152,11 @@ data class Settings(
     // Gestures
     val swipeDownNotifications: Boolean = true,
     val swipeUpSearch: Boolean = true,
+    /** Allow a left swipe from home to open the app drawer; Home still opens it. */
+    val swipeLeftApps: Boolean = true,
     /** Swipe towards the page left of home (finger moves right): the phone's web search. */
     val swipeRightSearch: Boolean = true,
+    val searchEngine: SearchEngine = SearchEngine.SYSTEM,
     val doubleTapLock: Boolean = true,
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
@@ -221,7 +233,9 @@ data class Settings(
 
         put("swipeDownNotifications", swipeDownNotifications)
         put("swipeUpSearch", swipeUpSearch)
+        put("swipeLeftApps", swipeLeftApps)
         put("swipeRightSearch", swipeRightSearch)
+        put("searchEngine", searchEngine.name)
         put("doubleTapLock", doubleTapLock)
     }
 
@@ -319,7 +333,9 @@ data class Settings(
 
                 swipeDownNotifications = o.optBoolean("swipeDownNotifications", d.swipeDownNotifications),
                 swipeUpSearch = o.optBoolean("swipeUpSearch", d.swipeUpSearch),
+                swipeLeftApps = o.optBoolean("swipeLeftApps", d.swipeLeftApps),
                 swipeRightSearch = o.optBoolean("swipeRightSearch", d.swipeRightSearch),
+                searchEngine = enumOr(o.optString("searchEngine"), d.searchEngine),
                 doubleTapLock = o.optBoolean("doubleTapLock", d.doubleTapLock),
             )
         }
