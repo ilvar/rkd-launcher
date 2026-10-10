@@ -50,7 +50,7 @@ Built with Kotlin and Jetpack Compose, without the Material library, in about 6,
   briefcase outline after its name, drawn in the text colour: the launcher's one pictogram.
 - Two corner shortcuts (Phone / Camera by default). Long-press one to change it.
 - Everything you touch lights up softly and fades back (no ripples, no colour).
-- Gestures: swipe left = app drawer, swipe right = the selected web search engine, swipe up = app search,
+- Gestures: swipe left = widgets when enabled, then app drawer; swipe right = the selected web search engine, swipe up = app search,
   swipe down = notifications, long-press empty space = settings, double tap = lock (on by default;
   needs the timer service). The home screen's left and right swipes can each be switched off in
   Settings → Gestures; that page also offers DuckDuckGo, Brave Search, Startpage, and Mojeek.
@@ -65,8 +65,9 @@ Built with Kotlin and Jetpack Compose, without the Material library, in about 6,
   alphabetical.
 - Long-press an app: Uninstall · App info · Move to fast apps · App timer · Rename · Hide app.
 
-**Widgets page** (optional, after the app drawer)
-- Enable in Settings → Widgets page, then swipe left from the app drawer.
+**Widgets page** (optional, after home)
+- Enable in Settings → Widgets page, then swipe left from home. If app swiping is enabled,
+  swipe left again to open the app drawer. Home opens the app drawer directly.
 - Add Android widgets with the system picker. Each spans the available width; controls above it
   move it up or down, adjust its height, or remove it. The layout stays on this device because
   widget bindings cannot be recreated from a settings backup.

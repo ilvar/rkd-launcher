@@ -29,5 +29,8 @@ class HomePressStateTest {
         assertEquals(0, homeDestination(true, 1))
         assertEquals(0, homeDestination(true, 2))
         assertEquals(0, homeDestination(false, 1))
+        assertEquals(2, homeDestination(true, 0, appsPage = 2))
+        assertEquals(0, homeDestination(true, 1, appsPage = 2))
+        assertEquals(0, homeDestination(true, 2, appsPage = 2))
     }
 }
