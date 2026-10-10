@@ -58,12 +58,19 @@ Built with Kotlin and Jetpack Compose, without the Material library, in about 6,
 
 **App drawer** (page 2)
 - Search bar, "installed in the last 24 hours", then every app alphabetically with an A–Z scrubber.
+
 - "Sort" under the search bar reorders the list: A–Z, most used, or most recently used (last 7
   days, from Android's own usage totals). The scrubber only shows for A–Z.
 - With an Android Work profile the list splits into **Personal** and **Work** tabs. Search always
   looks through both. Usage inside a Work profile is invisible to apps, so the Work tab stays
   alphabetical.
 - Long-press an app: Uninstall · App info · Move to fast apps · App timer · Rename · Hide app.
+
+**Widgets page** (optional, after the app drawer)
+- Enable in Settings → Widgets page, then swipe left from the app drawer.
+- Add Android widgets with the system picker. Each spans the available width; controls above it
+  move it up or down, adjust its height, or remove it. The layout stays on this device because
+  widget bindings cannot be recreated from a settings backup.
 
 **App timers**
 - Social media and games get a daily allowance automatically (30 min by default, configurable, or

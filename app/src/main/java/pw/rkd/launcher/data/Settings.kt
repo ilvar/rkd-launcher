@@ -101,6 +101,8 @@ data class Settings(
     val showShortcuts: Boolean = true,
     val leftShortcut: String = SHORTCUT_PHONE,
     val rightShortcut: String = SHORTCUT_CAMERA,
+    /** Add a page of full-width Android widgets after the app drawer. */
+    val showWidgetPage: Boolean = false,
 
     // Drawer
     val autoKeyboard: Boolean = false,
@@ -189,6 +191,7 @@ data class Settings(
         put("showShortcuts", showShortcuts)
         put("leftShortcut", leftShortcut)
         put("rightShortcut", rightShortcut)
+        put("showWidgetPage", showWidgetPage)
 
         put("autoKeyboard", autoKeyboard)
         put("preferLatinKeyboard", preferLatinKeyboard)
@@ -286,6 +289,7 @@ data class Settings(
                 showShortcuts = o.optBoolean("showShortcuts", d.showShortcuts),
                 leftShortcut = o.optString("leftShortcut", d.leftShortcut),
                 rightShortcut = o.optString("rightShortcut", d.rightShortcut),
+                showWidgetPage = o.optBoolean("showWidgetPage", d.showWidgetPage),
 
                 autoKeyboard = o.optBoolean("autoKeyboard", d.autoKeyboard),
                 preferLatinKeyboard = o.optBoolean("preferLatinKeyboard", d.preferLatinKeyboard),
