@@ -36,8 +36,15 @@ class SettingsMigrationTest {
     }
 
     @Test fun `settings survive a round trip`() {
-        val s = Settings(clockStyle = ClockStyle.SPLIT, splitSide = SplitSide.SCREEN_TIME, showCalendar = true, doubleTapLock = false, musicAutoHide = false, showWeather = true, weatherApp = "app:weather", showWallpaper = true, wallpaperUri = "content://example/image", preferLatinKeyboard = true, showWidgetPage = true, swipeLeftApps = false, swipeRightSearch = false, searchEngine = SearchEngine.BRAVE)
+        val s = Settings(clockStyle = ClockStyle.SPLIT, splitSide = SplitSide.SCREEN_TIME, showCalendar = true, calendarLines = 5, doubleTapLock = false, musicAutoHide = false, showWeather = true, weatherApp = "app:weather", showWallpaper = true, wallpaperUri = "content://example/image", preferLatinKeyboard = true, showWidgetPage = true, swipeLeftApps = false, swipeRightSearch = false, searchEngine = SearchEngine.BRAVE)
         assertEquals(s, Settings.fromJson(s.toJson()))
+    }
+
+    @Test fun `old compact calendar setting migrates to three lines`() {
+        val old = Settings().toJson().apply { remove("calendarLines"); put("compactCalendar", true) }
+        assertEquals(3, Settings.fromJson(old).calendarLines)
+        old.put("compactCalendar", false)
+        assertEquals(2, Settings.fromJson(old).calendarLines)
     }
 
     @Test fun `an install from before the music section could hide gets the hiding`() {

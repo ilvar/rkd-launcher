@@ -58,7 +58,7 @@ private fun update(transform: (Settings) -> Settings) = Graph.settings.update(tr
 
 // ---- Home screen -----------------------------------------------------------------------------
 
-private enum class HomeDialog { NONE, CLOCK, SPLIT_SIDE, RING, TAP, TIME_FORMAT, ALIGN, COUNT, COLUMNS, LEFT, RIGHT, CALENDAR, WEATHER_APP, MUSIC_APP, NOTE_APP }
+private enum class HomeDialog { NONE, CLOCK, SPLIT_SIDE, RING, TAP, TIME_FORMAT, ALIGN, COUNT, COLUMNS, LEFT, RIGHT, CALENDAR, CALENDAR_LINES, WEATHER_APP, MUSIC_APP, NOTE_APP }
 
 @Composable
 internal fun HomePage(settings: Settings, apps: List<AppEntry>, onBack: () -> Unit, go: (String) -> Unit) {
@@ -152,8 +152,9 @@ internal fun HomePage(settings: Settings, apps: List<AppEntry>, onBack: () -> Un
                     "account, it shows up here like any other calendar.",
             )
         }
-        ToggleRow("Compact calendar", settings.compactCalendar, enabled = settings.showCalendar,
-            subtitle = "Smaller text and more upcoming events.") { v -> update { it.copy(compactCalendar = v) } }
+        SettingRow("Calendar lines", value = settings.calendarLines.toString(), enabled = settings.showCalendar,
+            subtitle = "2 uses larger text; 3–5 use compact text. Shows up to this many upcoming events.",
+            onClick = { dialog = HomeDialog.CALENDAR_LINES })
         ToggleRow(
             "Week strip", settings.showWeekStrip, enabled = settings.showCalendar,
             subtitle = "Monday to Sunday with today marked, above the events.",
@@ -228,6 +229,9 @@ internal fun HomePage(settings: Settings, apps: List<AppEntry>, onBack: () -> Un
             onDismiss = close,
             onPick = { key, keys -> update { it.copy(calendarKey = key, calendarKeys = keys) } },
         )
+        HomeDialog.CALENDAR_LINES -> ChoiceDialog("Calendar lines", (2..5).map { it to it.toString() }, settings.calendarLines, close) { lines ->
+            update { it.copy(calendarLines = lines) }
+        }
         HomeDialog.TIME_FORMAT -> ChoiceDialog("Time format", TimeFormat.entries.map { it to it.label }, settings.timeFormat, close) { v -> update { it.copy(timeFormat = v) } }
         HomeDialog.WEATHER_APP -> AppPickerDialog(
             title = "Weather app",

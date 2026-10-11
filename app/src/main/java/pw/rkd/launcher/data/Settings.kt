@@ -79,7 +79,8 @@ data class Settings(
     /** [CalendarInfo.key] of the single calendar shown on the home screen, or [CALENDAR_AUTO] / [CALENDAR_ALL]. */
     val calendarKey: String = CALENDAR_AUTO,
     val calendarKeys: Set<String> = emptySet(),
-    val compactCalendar: Boolean = false,
+    /** Maximum upcoming events shown on home; 2 uses larger text, 3–5 use compact text. */
+    val calendarLines: Int = 2,
     val showWeather: Boolean = false,
     /** [AppEntry.key] opened when the weather line is tapped; blank keeps tap-to-refresh. */
     val weatherApp: String = "",
@@ -179,7 +180,7 @@ data class Settings(
         put("showCalendar", showCalendar)
         put("calendarKey", calendarKey)
         put("calendarKeys", JSONArray(calendarKeys.sorted()))
-        put("compactCalendar", compactCalendar)
+        put("calendarLines", calendarLines.coerceIn(2, 5))
         put("showWeather", showWeather)
         put("weatherApp", weatherApp)
         put("showWeekStrip", showWeekStrip)
@@ -276,7 +277,8 @@ data class Settings(
                     }
                 },
                 calendarKeys = o.optJSONArray("calendarKeys").strings().filter { it.startsWith("p:") || it.startsWith("w:") }.toSet(),
-                compactCalendar = o.optBoolean("compactCalendar", false),
+                calendarLines = (if (o.has("calendarLines")) o.optInt("calendarLines", 2)
+                    else if (o.optBoolean("compactCalendar", false)) 3 else 2).coerceIn(2, 5),
                 showWeather = o.optBoolean("showWeather", false),
                 weatherApp = o.optString("weatherApp", d.weatherApp),
                 showWeekStrip = o.optBoolean("showWeekStrip", d.showWeekStrip),
