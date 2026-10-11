@@ -1,5 +1,6 @@
 package pw.rkd.launcher.ui.widgets
 
+import android.appwidget.AppWidgetProviderInfo
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,17 +17,26 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import pw.rkd.launcher.ui.components.Label
 import pw.rkd.launcher.ui.components.FocusDialog
-import pw.rkd.launcher.ui.components.MenuRow
 import pw.rkd.launcher.ui.components.T
+import pw.rkd.launcher.ui.components.UnderlinedField
 import pw.rkd.launcher.ui.theme.LocalFocusColors
+import kotlin.math.roundToInt
+
+private data class WidgetChoice(val info: AppWidgetProviderInfo, val app: String, val widget: String, val size: String)
 
 @Composable
 fun WidgetPage(controller: WidgetController) {
@@ -74,15 +84,43 @@ fun WidgetPage(controller: WidgetController) {
         }
     }
     if (controller.pickerOpen) {
-        val widgets = controller.availableWidgets
+        val widgets = remember(controller.pickerOpen) {
+            val pm = context.packageManager
+            val density = context.resources.displayMetrics.density
+            controller.availableWidgets.map { info ->
+                val packageName = info.provider.packageName
+                val appName = runCatching {
+                    pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString()
+                }.getOrDefault(packageName)
+                val width = (info.minWidth / density).roundToInt().coerceAtLeast(0)
+                val height = (info.minHeight / density).roundToInt().coerceAtLeast(0)
+                WidgetChoice(info, appName, info.loadLabel(pm), "${width} × ${height} dp")
+            }.sortedWith(compareBy<WidgetChoice> { it.app.lowercase() }
+                .thenBy { it.widget.lowercase() })
+        }
+        var query by remember(controller.pickerOpen) { mutableStateOf(TextFieldValue("")) }
+        val shown = remember(widgets, query.text) {
+            val term = query.text.trim()
+            if (term.isEmpty()) widgets else widgets.filter {
+                it.app.contains(term, ignoreCase = true) || it.widget.contains(term, ignoreCase = true)
+            }
+        }
         FocusDialog(controller::dismissPicker, title = "Add widget", tall = true) {
+            UnderlinedField(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = "Search apps and widgets",
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 10.dp),
+                imeAction = ImeAction.Search,
+            )
             LazyColumn(Modifier.weight(1f)) {
-                items(widgets, key = { "${it.provider.flattenToString()}:${it.profile.hashCode()}" }) { info ->
-                    val packageName = info.provider.packageName
-                    val appName = runCatching {
-                        context.packageManager.getApplicationLabel(context.packageManager.getApplicationInfo(packageName, 0)).toString()
-                    }.getOrDefault(packageName)
-                    MenuRow(info.loadLabel(context.packageManager), detail = appName) { controller.addWidget(info) }
+                if (shown.isEmpty()) item { T("No matching widgets", Modifier.padding(24.dp), color = colors.dim) }
+                items(shown, key = { "${it.info.provider.flattenToString()}:${it.info.profile.hashCode()}" }) { choice ->
+                    Column(Modifier.fillMaxWidth().clickable { controller.addWidget(choice.info) }
+                        .padding(horizontal = 24.dp, vertical = 12.dp)) {
+                        T(choice.app, size = 17.sp, maxLines = 1)
+                        T("${choice.widget} · min ${choice.size}", size = 14.sp, color = colors.dim, maxLines = 2)
+                    }
                 }
             }
         }
