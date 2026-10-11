@@ -177,10 +177,12 @@ fun HomeScreen(
         }
     }
     var shownCalendar by remember { mutableStateOf<CalendarInfo?>(null) }
-    LaunchedEffect(settings.showCalendar, settings.calendarKey, settings.calendarKeys, settings.compactCalendar, resumeCount, calendarAccess) {
+    val calendarLines = settings.calendarLines.coerceIn(2, 5)
+    val compactCalendar = calendarLines > 2
+    LaunchedEffect(settings.showCalendar, settings.calendarKey, settings.calendarKeys, calendarLines, resumeCount, calendarAccess) {
         if (settings.showCalendar) {
             calendarAccess = CalendarRepository.hasAccess(context)
-            val agenda = CalendarRepository.agenda(context, settings.calendarKey, settings.calendarKeys, if (settings.compactCalendar) 8 else 3)
+            val agenda = CalendarRepository.agenda(context, settings.calendarKey, settings.calendarKeys, calendarLines)
             shownCalendar = agenda.calendar
             events = agenda.events
         }
@@ -311,16 +313,16 @@ fun HomeScreen(
 
         fun heightOf(fit: Fit): Float {
             val splitClock = (splitTimeSp * 1.2f + 42f) * textScale + 16f
-            val splitSide = if (sideCalendar) eventCount.coerceIn(1, if (settings.compactCalendar) 3 else 2) * (if (settings.compactCalendar) 34f else 44f) * textScale + 16f else 86f * textScale + 16f
+            val splitSide = if (sideCalendar) eventCount.coerceIn(1, calendarLines) * (if (compactCalendar) 34f else 44f) * textScale + 16f else 86f * textScale + 16f
             val clock = when (settings.clockStyle) {
                 ClockStyle.RING -> fit.ring.value
                 ClockStyle.SPLIT -> maxOf(splitClock, splitSide)
                 ClockStyle.PLAIN -> 100f * textScale
             }
             val noticeLines = if (notices > 0) 14f + notices * (19f * textScale + 12f) else 0f
-            val shownEvents = fit.maxEvents.coerceAtMost(eventCount).coerceAtLeast(1)
+            val shownEvents = calendarLines.coerceAtMost(eventCount).coerceAtLeast(1)
             val strip = if (settings.showWeekStrip) 46f + 14f * textScale else 0f
-            val calendar = if (settings.showCalendar && !sideCalendar) 22f + 14f * textScale + strip + shownEvents * (if (settings.compactCalendar) 15f * textScale + 2f else 18f * textScale + 6f) else 0f
+            val calendar = if (settings.showCalendar && !sideCalendar) 22f + 14f * textScale + strip + shownEvents * (if (compactCalendar) 15f * textScale + 2f else 18f * textScale + 6f) else 0f
             // Title row as tall as its 48dp buttons, then the song.
             val musicHeight = if (musicVisible) 12f + 48f + 24f * textScale else 0f
             val noteLines = if (settings.note.isBlank()) 1 else fit.maxEvents
@@ -343,7 +345,7 @@ fun HomeScreen(
             Fit(preferredRing * 0.88f, 22f, 6f, maxEvents = 2),
             Fit(132.dp, 22f, 4f, maxEvents = 1),
             Fit(132.dp, 18f, 2f, maxEvents = 1),
-        ).map { if (settings.compactCalendar) Fit(it.ring, it.textSp, it.padDp, when (it.maxEvents) { 3 -> 8; 2 -> 5; else -> 3 }) else it }
+        )
         val fit = options.firstOrNull { heightOf(it) <= available } ?: options.last()
         val ring = fit.ring.coerceAtLeast(132.dp)
         val favoriteSize = fit.textSp.sp
@@ -386,8 +388,8 @@ fun HomeScreen(
                             onClick = { openCalendarApp(context) },
                             onLongPress = { choosingSplitSide = true },
                             onRequestAccess = { askCalendar.launch(Manifest.permission.READ_CALENDAR) },
-                            maxEvents = if (settings.compactCalendar) 3 else 2,
-                            compact = settings.compactCalendar,
+                            maxEvents = calendarLines,
+                            compact = compactCalendar,
                         )
                     } else {
                         SplitScreenTime(today, usageAccess, onClick = openScreenTime, onLongPress = { choosingSplitSide = true }, highlight = tip == Tip.SCREEN_TIME)
@@ -468,8 +470,8 @@ fun HomeScreen(
                     use24h = use24h,
                     onClick = { openCalendarApp(context) },
                     onRequestAccess = { askCalendar.launch(Manifest.permission.READ_CALENDAR) },
-                    maxEvents = fit.maxEvents,
-                    compact = settings.compactCalendar,
+                    maxEvents = calendarLines,
+                    compact = compactCalendar,
                     calendarName = shownCalendar?.shortName,
                     showWeekStrip = settings.showWeekStrip,
                 )

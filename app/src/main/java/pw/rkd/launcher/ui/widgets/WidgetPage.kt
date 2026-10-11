@@ -17,13 +17,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -84,6 +88,8 @@ fun WidgetPage(controller: WidgetController) {
         }
     }
     if (controller.pickerOpen) {
+        val searchFocus = remember { FocusRequester() }
+        val keyboard = LocalSoftwareKeyboardController.current
         val widgets = remember(controller.pickerOpen) {
             val pm = context.packageManager
             val density = context.resources.displayMetrics.density
@@ -110,7 +116,7 @@ fun WidgetPage(controller: WidgetController) {
                 value = query,
                 onValueChange = { query = it },
                 placeholder = "Search apps and widgets",
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 10.dp),
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 10.dp).focusRequester(searchFocus),
                 imeAction = ImeAction.Search,
             )
             LazyColumn(Modifier.weight(1f)) {
@@ -123,6 +129,10 @@ fun WidgetPage(controller: WidgetController) {
                     }
                 }
             }
+        }
+        LaunchedEffect(Unit) {
+            searchFocus.requestFocus()
+            keyboard?.show()
         }
     }
 }
