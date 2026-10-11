@@ -232,7 +232,6 @@ fun HomeScreen(
     // calendar can only sit there while the calendar section is on; otherwise it is screen time.
     val split = settings.clockStyle == ClockStyle.SPLIT
     val sideCalendar = split && settings.splitSide == SplitSide.CALENDAR && settings.showCalendar
-    val sideScreenTime = split && !sideCalendar
 
     val favorites = remember(settings.favorites, settings.homeAppsCount, apps) { settings.favorites.take(settings.homeAppsCount).mapNotNull { key -> apps.firstOrNull { it.key == key } } }
     // Fast apps whose allowance for today is gone are shown dimmed.
@@ -312,7 +311,7 @@ fun HomeScreen(
         val splitTimeSp = ((halfWidth - amPmWidth) / emsWide / textScale).coerceIn(30f, 56f)
 
         fun heightOf(fit: Fit): Float {
-            val splitClock = (splitTimeSp * 1.2f + 42f) * textScale + 16f
+            val splitClock = (splitTimeSp * 1.2f + 42f + 20f + (if (settings.showWeather) 20f else 0f)) * textScale + 16f
             val splitSide = if (sideCalendar) eventCount.coerceIn(1, calendarLines) * (if (compactCalendar) 34f else 44f) * textScale + 16f else 86f * textScale + 16f
             val clock = when (settings.clockStyle) {
                 ClockStyle.RING -> fit.ring.value
@@ -333,8 +332,8 @@ fun HomeScreen(
             val lines = if (sectionCount > 0) (sectionCount + 1) * 1f else 0f
             val shortcuts = if (settings.showShortcuts) 28f + 20f * textScale else 20f
             val rows = rowCount * (fit.textSp * 1.2f * textScale + fit.padDp * 2)
-            val screenTime = if (sideScreenTime) 0f else 12f + 18f * textScale
-            val weatherHeight = if (settings.showWeather) 24f * textScale + 4f else 0f
+            val screenTime = if (split) 0f else 12f + 18f * textScale
+            val weatherHeight = if (!split && settings.showWeather) 24f * textScale + 4f else 0f
             return clock + screenTime + weatherHeight + noticeLines + calendar + musicHeight + note + todo + lines + rows + shortcuts + 6f + 36f // 36 = air
         }
 
@@ -370,6 +369,17 @@ fun HomeScreen(
                 Graph.state.did(Tip.SCREEN_TIME)
                 if (usageAccess) onOpenReview(null) else Perms.openUsageAccess(context)
             }
+            val weatherText = when {
+                !weatherAccess -> "Weather  ·  Allow location  →"
+                weather != null -> "${weather!!.temperature}°  ·  ${weather!!.description}"
+                else -> "Weather unavailable  ·  Retry  →"
+            }
+            val openWeather: () -> Unit = {
+                if (!weatherAccess) askWeather.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+                else if (weather != null && settings.weatherApp.isNotBlank()) {
+                    apps.firstOrNull { it.key == settings.weatherApp }?.let(onLaunch) ?: run { weatherRetry++ }
+                } else weatherRetry++
+            }
             if (split) {
                 SplitClockRow(
                     settings = settings,
@@ -378,6 +388,12 @@ fun HomeScreen(
                     onTap = clockTap,
                     onLongPress = { Graph.state.did(Tip.CLOCK); choosingClockTap = true },
                     highlight = tip == Tip.CLOCK,
+                    leftExtras = {
+                        SplitScreenTimeLine(today, usageAccess, onClick = openScreenTime,
+                            modifier = Modifier.tipTarget(tip == Tip.SCREEN_TIME, c.fg))
+                        if (settings.showWeather) WeatherLine(weatherText, compact = true,
+                            onClick = openWeather, onLongPress = { choosingWeatherApp = true })
+                    },
                 ) {
                     if (sideCalendar) {
                         SplitCalendar(
@@ -406,7 +422,7 @@ fun HomeScreen(
                 )
             }
 
-            if (!sideScreenTime) {
+            if (!split) {
                 VSpace(10.dp)
                 ScreenTimeLine(
                     today = today,
@@ -419,22 +435,8 @@ fun HomeScreen(
                 T("Choose wallpaper image  →", Modifier.fillMaxWidth().clickable { onOpenSettings("appearance") }.padding(vertical = 4.dp),
                     size = 13.sp, color = c.dim, align = TextAlign.Center, maxLines = 1)
             }
-            if (settings.showWeather) {
-                T(
-                    when {
-                        !weatherAccess -> "Weather  ·  Allow location  →"
-                        weather != null -> "${weather!!.temperature}°  ·  ${weather!!.description}"
-                        else -> "Weather unavailable  ·  Retry  →"
-                    },
-                    Modifier.fillMaxWidth().press(onLongClick = { choosingWeatherApp = true }) {
-                        if (!weatherAccess) askWeather.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
-                        else if (weather != null && settings.weatherApp.isNotBlank()) {
-                            apps.firstOrNull { it.key == settings.weatherApp }?.let(onLaunch) ?: run { weatherRetry++ }
-                        } else weatherRetry++
-                    }.padding(horizontal = 12.dp, vertical = 3.dp),
-                    size = 13.sp, color = c.dim, align = TextAlign.Center, maxLines = 1,
-                )
-            }
+            if (settings.showWeather && !split) WeatherLine(weatherText, compact = false,
+                onClick = openWeather, onLongPress = { choosingWeatherApp = true })
 
             // One-line notices. They disappear as soon as they have been dealt with.
             if (setupIncomplete || pendingReview != null || tip != null) {
@@ -770,6 +772,20 @@ private fun openLink(context: Context, link: String, packageName: String): Boole
         Intent(Intent.ACTION_VIEW, uri).setPackage(packageName),
         Intent(Intent.ACTION_VIEW, uri),
         options = launchOptions(context),
+    )
+}
+
+@Composable
+private fun WeatherLine(text: String, compact: Boolean, onClick: () -> Unit, onLongPress: () -> Unit) {
+    val c = LocalFocusColors.current
+    T(
+        text,
+        Modifier.fillMaxWidth().press(onLongClick = onLongPress, onClick = onClick)
+            .padding(horizontal = if (compact) 0.dp else 12.dp, vertical = 3.dp),
+        size = (if (compact) 12 else 13).sp,
+        color = c.dim,
+        align = if (compact) TextAlign.End else TextAlign.Center,
+        maxLines = 1,
     )
 }
 

@@ -53,6 +53,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -302,6 +303,7 @@ fun SplitClockRow(
     modifier: Modifier = Modifier,
     /** Outline the clock half: a tip is pointing at it. */
     highlight: Boolean = false,
+    leftExtras: @Composable ColumnScope.() -> Unit = {},
     side: @Composable () -> Unit,
 ) {
     val c = LocalFocusColors.current
@@ -330,27 +332,28 @@ fun SplitClockRow(
         Column(
             Modifier
                 .weight(1f)
-                .tipTarget(highlight, c.fg)
-                .press(onLongClick = onLongPress, onClick = onTap)
                 .padding(start = 12.dp, end = 18.dp, top = 8.dp, bottom = 8.dp),
             horizontalAlignment = Alignment.End,
         ) {
-            Row(verticalAlignment = Alignment.Bottom) {
-                T(time, size = timeSize, weight = FontWeight.Light, maxLines = 1)
-                if (amPm != null) {
-                    HSpace(5.dp)
-                    T(amPm, Modifier.padding(bottom = (timeSize.value * 0.17f).dp), size = 12.sp, color = c.dim, maxLines = 1)
+            Column(Modifier.tipTarget(highlight, c.fg).press(onLongClick = onLongPress, onClick = onTap), horizontalAlignment = Alignment.End) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    T(time, size = timeSize, weight = FontWeight.Light, maxLines = 1)
+                    if (amPm != null) {
+                        HSpace(5.dp)
+                        T(amPm, Modifier.padding(bottom = (timeSize.value * 0.17f).dp), size = 12.sp, color = c.dim, maxLines = 1)
+                    }
+                }
+                if (settings.showDate) {
+                    VSpace(2.dp)
+                    T(now.format(DATE_SHORT), size = 14.sp, color = c.dim, maxLines = 1)
+                }
+                if (showBattery) {
+                    VSpace(4.dp)
+                    val urgent = battery.percent <= 15 && !battery.charging
+                    T(batteryLine(battery, "  ·  "), size = 12.sp, color = if (urgent) c.fg else c.faint, maxLines = 1)
                 }
             }
-            if (settings.showDate) {
-                VSpace(2.dp)
-                T(now.format(DATE_SHORT), size = 14.sp, color = c.dim, maxLines = 1)
-            }
-            if (showBattery) {
-                VSpace(4.dp)
-                val urgent = battery.percent <= 15 && !battery.charging
-                T(batteryLine(battery, "  ·  "), size = 12.sp, color = if (urgent) c.fg else c.faint, maxLines = 1)
-            }
+            leftExtras()
         }
         Box(Modifier.weight(1f)) { side() }
     }
@@ -460,6 +463,16 @@ fun ScreenTimeLine(today: DayUsage?, hasAccess: Boolean, onClick: () -> Unit, mo
         T("Screen time  ·  ", size = 13.sp, color = c.dim, maxLines = 1)
         T(if (hasAccess) formatDuration(today?.total ?: 0L) else "Allow access  →", size = 14.sp, maxLines = 1)
     }
+}
+
+@Composable
+fun SplitScreenTimeLine(today: DayUsage?, hasAccess: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val c = LocalFocusColors.current
+    T(
+        if (hasAccess) "Screen time · ${formatDuration(today?.total ?: 0L)}" else "Screen time · Allow access  →",
+        modifier.fillMaxWidth().press(onClick = onClick).padding(top = 9.dp),
+        size = 12.sp, color = c.dim, align = TextAlign.End, maxLines = 1,
+    )
 }
 
 /** A data class on purpose: a player that reports the same thing again changes no state, so nothing redraws. */
